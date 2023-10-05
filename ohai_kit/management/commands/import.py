@@ -37,9 +37,7 @@ class Command(BaseCommand):
             assert project.has_key("steps")
             photo_paths.append(project["photo"])
             for work_step in project["steps"]:
-                for photo in work_step["photos"]:
-                    photo_paths.append(photo["path"])
-
+                photo_paths.extend(photo["path"] for photo in work_step["photos"])
         # That is probably good enough.  Now, let's drop pretty much
         # the entire database!  Nothing could possibly go wrong!
         for model in [Project, WorkStep, StepPicture, StepAttachment,
@@ -48,10 +46,7 @@ class Command(BaseCommand):
                 "Dropping all tables for {0}!".format(str(model)))
             model.objects.all().delete()
 
-        # Now to restore project data and related tables...
-        project_index = 0
-        for project in data["projects"]:
-            project_index += 1
+        for project_index, project in enumerate(data["projects"], start=1):
             self.stdout.write(
                 " - restoring project {0}...".format(project["name"]))
             project_record = Project()
@@ -63,29 +58,22 @@ class Command(BaseCommand):
             project_record.order = project_index
             project_record.save()
 
-            step_index = 1
-            for work_step in project["steps"]:
+            for step_index, work_step in enumerate(project["steps"], start=1):
                 step_record = WorkStep()
                 step_record.project = project_record
                 step_record.name = work_step["name"]
                 step_record.description = work_step["description"]
                 step_record.sequence_number = step_index*10
                 step_record.save()
-                step_index += 1
-                
-                photo_index = 1
-                for photo in work_step["photos"]:
+                for photo_index, photo in enumerate(work_step["photos"], start=1):
                     photo_record = StepPicture()
                     photo_record.step = step_record
                     photo_record.photo = photo["path"]
                     photo_record.caption = photo["caption"]
                     photo_record.image_order = photo_index * 10
                     photo_record.save()
-                    photo_index += 1
-
                 if work_step.has_key("attchs"):
-                    attachment_index = 1
-                    for att in work_step["attchs"]:
+                    for attachment_index, att in enumerate(work_step["attchs"], start=1):
                         att_record = StepAttachment()
                         att_record.step = step_record
                         att_record.attachment = att["path"]
@@ -94,21 +82,13 @@ class Command(BaseCommand):
                         if att["thumb"]:
                             att_record.thumbnail = att["thumb"]
                         att_record.save()
-                        attachment_index += 1
-
-                check_index = 1
-                for check in work_step["checks"]:
+                for check_index, check in enumerate(work_step["checks"], start=1):
                     check_record = StepCheck()
                     check_record.step = step_record
                     check_record.message = check
                     check_record.check_order = check_index * 10
                     check_record.save()
-                    check_index += 1
-
-        # Restore project set data
-        group_index = 0
-        for group in data["groups"]:
-            group_index += 1
+        for group_index, group in enumerate(data["groups"], start=1):
             group_record = ProjectSet()
             if group.has_key("slug"):
                 group_record.slug = group["slug"]
@@ -130,6 +110,6 @@ class Command(BaseCommand):
                     continue
                 group_record.projects.add(project)
             group_record.save()
-        
+
         # All done!
         self.stdout.write("Done!")

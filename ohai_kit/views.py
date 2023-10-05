@@ -35,10 +35,7 @@ def get_active_jobs(user, project=None):
     found = JobInstance.objects.filter(**querie)
     if project is not None:
         assert len(found) <= 1
-        if found:
-            return found[0]
-        else:
-            return False
+        return found[0] if found else False
     return found
 
 
@@ -202,18 +199,19 @@ def system_index(request):
         else:
             return group_view(request, None, True)
 
-    group_display = []
-    for pset in groups:
-        group_display.append({
-            "name" : pset.name,
-            "url" : reverse("ohai_kit:named_group", args=(pset.slug,)),
-            "abstract" : pset.abstract,
-            "photo" : pset.photo,
-            "special" : False,
-            "pk" : pset.pk,
-            "legacy" : pset.legacy if request.user.is_staff else False,
-            "private" : pset.private if request.user.is_staff else False,
-        })
+    group_display = [
+        {
+            "name": pset.name,
+            "url": reverse("ohai_kit:named_group", args=(pset.slug,)),
+            "abstract": pset.abstract,
+            "photo": pset.photo,
+            "special": False,
+            "pk": pset.pk,
+            "legacy": pset.legacy if request.user.is_staff else False,
+            "private": pset.private if request.user.is_staff else False,
+        }
+        for pset in groups
+    ]
     if len(ungrouped):
         try:
             photo = settings.OHAIKIT_MISC_GROUP_PHOTO
@@ -300,12 +298,10 @@ def project_view(request, project_slug):
 
     user = request.user
     project = get_object_or_404(Project, slug=project_slug)
-    active_job = get_active_jobs(user, project)
-
-    if active_job:
+    if active_job := get_active_jobs(user, project):
         return HttpResponseRedirect(
             reverse("ohai_kit:job_status", args=(active_job.id,)))
-    
+
     context = {
         "user" : user,
         "project" : project,
@@ -323,24 +319,20 @@ def guest_workflow(request, project_slug):
     project = get_object_or_404(Project, slug=project_slug)
     sequence = [[step, "pending"] for step in
                 project.workstep_set.order_by("sequence_number")]
-    if len(sequence) > 0:
+    if sequence:
         # make the first step "active"
         sequence[0][1] = "active"
 
-        # the following is to facilitate the navigation buttons without
-        # javascript in guest mode
-        counter = 1
-        for step in sequence:
+        for counter, step in enumerate(sequence, start=1):
             this_step = "step_{0}".format(counter)
             next_step = "step_{0}".format(counter+1)
             last_step = "step_{0}".format(counter-1)
             step.append(this_step)
             step.append(next_step)
             step.append(last_step)
-            counter+=1
         sequence[0][4] = "step_1"
         sequence[-1][3] = "takemehome"
-        
+
     context = {
         "user": request.user,
         "project": project,

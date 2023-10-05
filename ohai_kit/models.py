@@ -29,7 +29,7 @@ class Project(models.Model):
     order = models.IntegerField(default=0)
 
     def get_absolute_url(self):
-        return "/workflow/%s/" % self.slug
+        return f"/workflow/{self.slug}/"
 
 class ProjectSet(models.Model):
     """
@@ -59,7 +59,7 @@ class ProjectSet(models.Model):
         return len(self.projects.all()) == 0
 
     def get_absolute_url(self):
-        return "/group/%s/" % self.slug
+        return f"/group/{self.slug}/"
 
 
 class WorkStep(models.Model):
@@ -108,8 +108,7 @@ class WorkStep(models.Model):
             ("img", self.get_step_pictures()),
         ]
         for hint, records in groups:
-            for data in records:
-                found.append((hint, data))
+            found.extend((hint, data) for data in records)
         return found
 
     def get_step_checks(self):
@@ -203,14 +202,12 @@ class JobInstance(models.Model):
         """
         Returns true if this job has been completed.
         """
-        if self.completion_time != None:
-            return True
-        else:
+        if self.completion_time is None:
             steps = self.get_work_sequence()
             for step, state in steps:
                 if state != "completed":
                     return False
-            return True
+        return True
 
     completed.admin_order_field = 'completion_time'
     completed.boolean = True

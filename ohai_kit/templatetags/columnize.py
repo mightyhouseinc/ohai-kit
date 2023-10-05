@@ -10,13 +10,10 @@ def columnize(item_list, period):
     if not item_list:
         item_list = []
     columns = []
-    ct = 0
-    for item in item_list:
+    for ct, item in enumerate(item_list):
         if ct % period == 0:
             columns.append([])
         columns[-1].append(item)
-        ct += 1
-
     return columns
 
 
@@ -30,5 +27,5 @@ def remainderize(item_list, period):
         item_list = []
     columns = columnize(item_list, period)
     remainder = period - len(columns[-1])
-    
-    return [None for i in range(remainder)]
+
+    return [None for _ in range(remainder)]
